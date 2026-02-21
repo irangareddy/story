@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./story-backend
+    env_file: ./story-backend/.env
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./data:/data
+    environment:
+      - STORY_DATA_DIR=/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./story-frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
