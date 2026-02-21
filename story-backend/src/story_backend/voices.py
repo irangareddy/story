@@ -6,6 +6,7 @@ import httpx
 from flask import Blueprint, jsonify, request
 
 from story_backend.config import SMALLEST_API_KEY, SMALLEST_BASE_URL
+from story_backend.db import get_client
 
 log = logging.getLogger(__name__)
 
@@ -107,9 +108,17 @@ def clone_voice():
 
     payload = resp.json()
     voice_data = payload.get("data", {})
+    voice_id = voice_data.get("voiceId")
+
+    get_client().mutation("voices:create", {
+        "voiceId": voice_id,
+        "name": name,
+        "cloned": True,
+        "tags": voice_data.get("tags"),
+    })
 
     return jsonify(
-        voice_id=voice_data.get("voiceId"),
+        voice_id=voice_id,
         name=name,
         status=voice_data.get("status", "ready"),
     )
@@ -145,9 +154,19 @@ def list_voices():
       429:
         description: Rate-limited by smallest.ai.
     """
-    headers = _auth_headers()
+    convex = get_client()
 
-    # Fetch built-in voices and cloned voices in parallel.
+    # Try Convex cache first.
+    cached = convex.query("voices:list")
+    if cached:
+        combined = [
+            {"voice_id": v["voiceId"], "name": v["name"], "tags": v.get("tags", {}), "cloned": v["cloned"]}
+            for v in cached
+        ]
+        return jsonify(voices=combined)
+
+    # Cache empty — fetch from API and sync.
+    headers = _auth_headers()
     builtin_url = f"{SMALLEST_BASE_URL}/api/v1/lightning-v2/get_voices"
     cloned_url = f"{SMALLEST_BASE_URL}/api/v1/lightning-large/get_cloned_voices"
 
@@ -155,7 +174,6 @@ def list_voices():
         builtin_resp = client.get(builtin_url)
         cloned_resp = client.get(cloned_url)
 
-    # If either fails, forward the first error.
     err = _forward_error(builtin_resp)
     if err:
         return err
@@ -166,22 +184,18 @@ def list_voices():
     builtin_voices = builtin_resp.json().get("voices", [])
     cloned_voices = cloned_resp.json().get("voices", [])
 
-    # Normalise both lists to a common shape.
     combined = []
+    sync_list = []
     for v in builtin_voices:
-        combined.append({
-            "voice_id": v.get("voiceId"),
-            "name": v.get("displayName"),
-            "tags": v.get("tags", {}),
-            "cloned": False,
-        })
+        entry = {"voice_id": v.get("voiceId"), "name": v.get("displayName"), "tags": v.get("tags", {}), "cloned": False}
+        combined.append(entry)
+        sync_list.append({"voiceId": entry["voice_id"], "name": entry["name"], "cloned": False, "tags": entry["tags"]})
     for v in cloned_voices:
-        combined.append({
-            "voice_id": v.get("voiceId"),
-            "name": v.get("displayName"),
-            "tags": v.get("tags", {}),
-            "cloned": True,
-        })
+        entry = {"voice_id": v.get("voiceId"), "name": v.get("displayName"), "tags": v.get("tags", {}), "cloned": True}
+        combined.append(entry)
+        sync_list.append({"voiceId": entry["voice_id"], "name": entry["name"], "cloned": True, "tags": entry["tags"]})
+
+    convex.mutation("voices:sync", {"voices": sync_list})
 
     return jsonify(voices=combined)
 
@@ -226,5 +240,7 @@ def delete_voice(voice_id: str):
     err = _forward_error(resp)
     if err:
         return err
+
+    get_client().mutation("voices:remove", {"voiceId": voice_id})
 
     return jsonify(message="Voice deleted.")
