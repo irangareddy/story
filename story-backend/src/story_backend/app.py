@@ -2,6 +2,7 @@ from flasgger import Swagger
 from flask import Flask, jsonify, request
 
 from story_backend.config import SMALLEST_API_KEY  # noqa: F401 — triggers dotenv load
+from story_backend.db import get_client
 from story_backend.extract import extract_text
 from story_backend.narration import narration_bp
 from story_backend.transcription import transcription_bp
@@ -73,7 +74,60 @@ def upload():
     except Exception as e:
         return jsonify(error=f"Extraction failed: {e}"), 500
 
-    return jsonify(result)
+    book_id = get_client().mutation("books:create", {
+        "filename": result["filename"],
+        "title": result.get("title", result["filename"]),
+        "format": result["filename"].rsplit(".", 1)[-1].lower(),
+        "pageCount": result.get("pages"),
+        "chapters": result.get("chapters", []),
+    })
+
+    return jsonify({**result, "book_id": book_id})
+
+
+@app.get("/books")
+def list_books():
+    """List all stored books.
+    ---
+    tags:
+      - Books
+    responses:
+      200:
+        description: List of stored books.
+        schema:
+          type: object
+          properties:
+            books:
+              type: array
+              items:
+                type: object
+    """
+    books = get_client().query("books:list")
+    return jsonify(books=books)
+
+
+@app.get("/books/<book_id>")
+def get_book(book_id: str):
+    """Get a stored book by ID.
+    ---
+    tags:
+      - Books
+    parameters:
+      - in: path
+        name: book_id
+        type: string
+        required: true
+        description: The Convex book ID.
+    responses:
+      200:
+        description: The stored book.
+      404:
+        description: Book not found.
+    """
+    book = get_client().query("books:get", {"id": book_id})
+    if not book:
+        return jsonify(error="Book not found"), 404
+    return jsonify(book)
 
 
 if __name__ == "__main__":
