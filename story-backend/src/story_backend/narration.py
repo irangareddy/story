@@ -13,7 +13,7 @@ log = logging.getLogger(__name__)
 narration_bp = Blueprint("narration", __name__)
 
 _TTS_PATH = "/api/v1/lightning-v2/get_speech"
-_DEFAULT_VOICE_ID = "emily"
+_DEFAULT_VOICE_ID = "ashley"
 _DEFAULT_SAMPLE_RATE = 24000
 _DEFAULT_SPEED = 1.0
 _WAV_HEADER_BYTES = 44
@@ -83,12 +83,10 @@ def narrate():
     """
     data = request.get_json(silent=True) or {}
     text = data.get("text")
-    voice_id = data.get("voice_id")
+    voice_id = data.get("voice_id") or _DEFAULT_VOICE_ID
 
     if not text:
         return jsonify(error="No text provided"), 400
-    if not voice_id:
-        return jsonify(error="No voice_id provided"), 400
 
     sample_rate = data.get("sample_rate", _DEFAULT_SAMPLE_RATE)
     speed = data.get("speed", _DEFAULT_SPEED)
@@ -131,14 +129,16 @@ def narrate():
     storage_id = upload_resp.json()["storageId"]
 
     book_id = data.get("book_id")
-    chunk_id = convex.mutation("audioChunks:create", {
-        "bookId": book_id if book_id else None,
+    create_args: dict = {
         "text": text,
         "voiceId": voice_id,
         "sampleRate": sample_rate,
         "durationSec": duration,
         "storageId": storage_id,
-    })
+    }
+    if book_id:
+        create_args["bookId"] = book_id
+    chunk_id = convex.mutation("audioChunks:create", create_args)
 
     return jsonify(
         chunk_id=chunk_id,
