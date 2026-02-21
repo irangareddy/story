@@ -6,6 +6,7 @@ import httpx
 from flask import Blueprint, jsonify, request
 
 from story_backend.config import SMALLEST_API_KEY, SMALLEST_BASE_URL
+from story_backend.db import get_client
 
 log = logging.getLogger(__name__)
 
@@ -97,9 +98,44 @@ def transcribe():
         return jsonify(error="Transcription service error"), 502
 
     data = resp.json()
+    transcription_text = data.get("transcription", "")
+    audio_length = data.get("audio_length", 0)
+
+    audio_chunk_id = request.form.get("audio_chunk_id")
+    transcription_id = get_client().mutation("transcriptions:create", {
+        "audioChunkId": audio_chunk_id if audio_chunk_id else None,
+        "text": transcription_text,
+        "audioLength": audio_length,
+        "language": language,
+    })
 
     return jsonify(
-        transcription=data.get("transcription", ""),
-        audio_length=data.get("audio_length", 0),
+        transcription_id=transcription_id,
+        transcription=transcription_text,
+        audio_length=audio_length,
         language=language,
     )
+
+
+@transcription_bp.get("/transcriptions/<transcription_id>")
+def get_transcription(transcription_id: str):
+    """Get a stored transcription by ID.
+    ---
+    tags:
+      - Transcription
+    parameters:
+      - in: path
+        name: transcription_id
+        type: string
+        required: true
+        description: The Convex transcription ID.
+    responses:
+      200:
+        description: The stored transcription.
+      404:
+        description: Transcription not found.
+    """
+    result = get_client().query("transcriptions:get", {"id": transcription_id})
+    if not result:
+        return jsonify(error="Transcription not found"), 404
+    return jsonify(result)
