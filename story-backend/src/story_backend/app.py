@@ -1,5 +1,7 @@
+import os
+
 from flasgger import Swagger
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 
 from story_backend.config import SMALLEST_API_KEY  # noqa: F401 — triggers dotenv load
 from story_backend.db import get_client
@@ -7,6 +9,12 @@ from story_backend.extract import extract_text
 from story_backend.narration import narration_bp
 from story_backend.transcription import transcription_bp
 from story_backend.voices import voices_bp
+
+DATA_DIR = os.environ.get(
+    "STORY_DATA_DIR",
+    os.path.join(os.path.dirname(__file__), "..", "..", "..", "data"),
+)
+os.makedirs(DATA_DIR, exist_ok=True)
 
 app = Flask(__name__)
 
@@ -21,6 +29,28 @@ Swagger(app)
 app.register_blueprint(voices_bp)
 app.register_blueprint(narration_bp)
 app.register_blueprint(transcription_bp)
+
+
+@app.get("/files/<path:filename>")
+def serve_file(filename: str):
+    """Serve an original book file from the data directory.
+    ---
+    tags:
+      - Files
+    parameters:
+      - in: path
+        name: filename
+        type: string
+        required: true
+        description: The filename to serve.
+    responses:
+      200:
+        description: The file contents.
+      404:
+        description: File not found.
+    """
+    safe_name = os.path.basename(filename)
+    return send_from_directory(DATA_DIR, safe_name)
 
 
 @app.post("/upload")
@@ -66,6 +96,12 @@ def upload():
     file = request.files.get("file")
     if not file:
         return jsonify(error="No file provided"), 400
+
+    # Save the original file to data directory
+    if file.filename:
+        dest = os.path.join(DATA_DIR, os.path.basename(file.filename))
+        file.save(dest)
+        file.seek(0)
 
     try:
         result = extract_text(file)
