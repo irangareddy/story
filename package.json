@@ -1,0 +1,24 @@
+{
+  "name": "story",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/irangareddy/story.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/irangareddy/story/issues"
+  },
+  "homepage": "https://github.com/irangareddy/story#readme",
+  "dependencies": {
+    "convex": "^1.32.0"
+  }
+}

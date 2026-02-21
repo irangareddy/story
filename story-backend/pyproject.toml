@@ -15,6 +15,7 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "python-dotenv (>=1.2.1,<2.0.0)",
     "httpx (>=0.28.1,<0.29.0)",
+    "convex>=0.7",
 ]
 
 [tool.poetry]
