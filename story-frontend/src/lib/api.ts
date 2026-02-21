@@ -75,6 +75,10 @@ export function streamUrl(chunkId: string): string {
   return `/stream/${chunkId}`;
 }
 
+export function bookFileUrl(filename: string): string {
+  return `/files/${encodeURIComponent(filename)}`;
+}
+
 export async function transcribe(
   file: File,
   language = "en"
