@@ -4,6 +4,7 @@ import uuid
 from flasgger import Swagger
 from flask import Flask, Response, jsonify, request
 
+from story_backend.config import SMALLEST_API_KEY  # noqa: F401 — triggers dotenv load
 from story_backend.extract import extract_text
 
 app = Flask(__name__)

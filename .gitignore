@@ -22,6 +22,9 @@ venv/
 .coverage
 htmlcov/
 
+# Secrets
+.env
+
 # OS
 .DS_Store
 Thumbs.db
