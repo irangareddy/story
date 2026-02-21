@@ -1,0 +1,28 @@
+[project]
+name = "story-backend"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Ranga Reddy Nukala",email = "itsmerr17@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "flask>=3.1",
+    "flasgger>=0.9.7",
+    "pymupdf>=1.25",
+    "ebooklib>=0.18",
+    "beautifulsoup4>=4.12",
+]
+
+[tool.poetry]
+packages = [{include = "story_backend", from = "src"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.0.2,<10.0.0)"
+]
