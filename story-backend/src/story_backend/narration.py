@@ -95,7 +95,7 @@ def narrate():
 
     sample_rate = data.get("sample_rate", _DEFAULT_SAMPLE_RATE)
     speed = data.get("speed", _DEFAULT_SPEED)
-    language = data.get("language", "auto")
+    language = data.get("language", "en")
 
     payload = {
         "text": text,
