@@ -1,5 +1,4 @@
 import { useAudioStore } from "@/stores/audio-store";
-import { streamUrl } from "@/lib/api";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   TranscriptViewerContainer,
@@ -15,11 +14,11 @@ interface ChapterContentProps {
 }
 
 export function ChapterContent({ title, text }: ChapterContentProps) {
-  const chunkId = useAudioStore((s) => s.chunkId);
+  const audioUrl = useAudioStore((s) => s.audioUrl);
   const narrationText = useAudioStore((s) => s.narrationText);
   const alignment = useAudioStore((s) => s.alignment);
 
-  const isNarrating = !!(chunkId && alignment && narrationText);
+  const isNarrating = !!(audioUrl && alignment && narrationText);
 
   return (
     <ScrollArea className="h-[calc(100vh-10rem)] flex-1">
@@ -28,7 +27,7 @@ export function ChapterContent({ title, text }: ChapterContentProps) {
 
         {isNarrating ? (
           <TranscriptViewerContainer
-            audioSrc={streamUrl(chunkId)}
+            audioSrc={audioUrl}
             audioType="audio/wav"
             alignment={alignment}
           >

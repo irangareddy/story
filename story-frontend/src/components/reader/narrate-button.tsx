@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useVoices } from "@/hooks/use-voices";
 import { useNarrate } from "@/hooks/use-narration";
 import { useAudioStore } from "@/stores/audio-store";
 import { Button } from "@/components/ui/button";
+import { Loader2, SkipForward } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,33 +16,73 @@ import {
 interface NarrateButtonProps {
   text: string;
   chapterTitle: string;
-  bookId?: string;
 }
 
-export function NarrateButton({ text, chapterTitle, bookId }: NarrateButtonProps) {
+export function NarrateButton({ text, chapterTitle }: NarrateButtonProps) {
   const [voiceId, setVoiceId] = useState<string>("");
   const [speed, setSpeed] = useState("1");
+  const [elapsed, setElapsed] = useState(0);
+  const [remainingText, setRemainingText] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { data: voices } = useVoices();
   const narrateMutation = useNarrate();
   const play = useAudioStore((s) => s.play);
 
-  const handleNarrate = () => {
+  // Reset remaining text when chapter text changes
+  useEffect(() => {
+    setRemainingText(null);
+  }, [text]);
+
+  useEffect(() => {
+    if (narrateMutation.isPending) {
+      setElapsed(0);
+      timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [narrateMutation.isPending]);
+
+  const doNarrate = (inputText: string) => {
     narrateMutation.mutate(
       {
-        text,
+        text: inputText,
         voiceId: voiceId || undefined,
         speed: parseFloat(speed),
-        bookId,
       },
       {
         onSuccess: (data) => {
-          play(data.chunk_id, chapterTitle, data.narrated_text, data.duration_sec);
+          play(data.audioUrl, chapterTitle, data.narratedText, data.durationSec);
+          // Calculate remaining text after what was narrated
+          // Backend replaces newlines with spaces in the header, so normalize before matching
+          const normalized = inputText.replace(/\n/g, " ");
+          const idx = normalized.indexOf(data.narratedText);
+          if (idx !== -1) {
+            const rest = inputText.slice(idx + data.narratedText.length).trimStart();
+            setRemainingText(rest || null);
+          } else {
+            setRemainingText(null);
+          }
         },
         onError: (err) => {
           toast.error(err.message || "Narration failed");
         },
       }
     );
+  };
+
+  const handleNarrate = () => {
+    setRemainingText(null);
+    doNarrate(text);
+  };
+
+  const handleNext = () => {
+    if (remainingText) doNarrate(remainingText);
   };
 
   return (
@@ -73,8 +114,22 @@ export function NarrateButton({ text, chapterTitle, bookId }: NarrateButtonProps
       </Select>
 
       <Button onClick={handleNarrate} disabled={narrateMutation.isPending}>
-        {narrateMutation.isPending ? "Narrating..." : "Narrate"}
+        {narrateMutation.isPending ? (
+          <>
+            <Loader2 className="size-4 animate-spin" />
+            <span className="tabular-nums">{elapsed}s</span>
+          </>
+        ) : (
+          "Narrate"
+        )}
       </Button>
+
+      {remainingText && !narrateMutation.isPending && (
+        <Button variant="outline" onClick={handleNext}>
+          <SkipForward className="size-4" />
+          Next
+        </Button>
+      )}
     </div>
   );
 }

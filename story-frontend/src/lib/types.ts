@@ -30,11 +30,10 @@ export interface NarrateRequest {
 }
 
 export interface NarrateResponse {
-  chunk_id: string;
-  voice_id: string;
-  duration_sec: number;
-  narrated_text: string;
-  status: string;
+  audioUrl: string;
+  voiceId: string;
+  durationSec: number;
+  narratedText: string;
 }
 
 export interface UploadResponse {

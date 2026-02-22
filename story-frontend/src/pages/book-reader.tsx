@@ -65,7 +65,6 @@ export default function BookReader() {
           <NarrateButton
             text={chapter.text}
             chapterTitle={chapter.title || `Chapter ${activeChapter + 1}`}
-            bookId={book._id}
           />
         )}
       </div>

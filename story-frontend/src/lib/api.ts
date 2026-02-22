@@ -59,22 +59,27 @@ export async function narrate(
   text: string,
   voiceId?: string,
   speed?: number,
-  bookId?: string
 ): Promise<NarrateResponse> {
-  return apiFetch<NarrateResponse>("/narrate", {
+  const res = await fetch(`${API_PREFIX}/narrate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       text,
       voice_id: voiceId,
       speed,
-      book_id: bookId,
     }),
   });
-}
-
-export function streamUrl(chunkId: string): string {
-  return `${API_PREFIX}/stream/${chunkId}`;
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error || res.statusText);
+  }
+  const blob = await res.blob();
+  const audioUrl = URL.createObjectURL(blob);
+  const durationSec = parseFloat(res.headers.get("X-Duration-Sec") || "0");
+  const rawNarratedText = res.headers.get("X-Narrated-Text");
+  const narratedText = rawNarratedText ? decodeURIComponent(rawNarratedText) : text;
+  const resVoiceId = res.headers.get("X-Voice-Id") || voiceId || "";
+  return { audioUrl, durationSec, narratedText, voiceId: resVoiceId };
 }
 
 export function bookFileUrl(filename: string): string {

@@ -1,12 +1,11 @@
 import { create } from "zustand";
 import type { CharacterAlignmentResponseModel } from "@elevenlabs/elevenlabs-js/api/types/CharacterAlignmentResponseModel";
 import { buildSyntheticAlignment } from "@/lib/alignment";
-import { streamUrl } from "@/lib/api";
 
 const audio = new Audio();
 
 interface AudioState {
-  chunkId: string | null;
+  audioUrl: string | null;
   chapterTitle: string | null;
   narrationText: string | null;
   alignment: CharacterAlignmentResponseModel | null;
@@ -14,7 +13,7 @@ interface AudioState {
   currentTime: number;
   duration: number;
   speed: number;
-  play: (chunkId: string, chapterTitle: string, text: string, durationSec: number) => void;
+  play: (audioUrl: string, chapterTitle: string, text: string, durationSec: number) => void;
   pause: () => void;
   resume: () => void;
   setSpeed: (speed: number) => void;
@@ -22,7 +21,7 @@ interface AudioState {
   stop: () => void;
 }
 
-export const useAudioStore = create<AudioState>((set) => {
+export const useAudioStore = create<AudioState>((set, get) => {
   audio.addEventListener("timeupdate", () => {
     set({ currentTime: audio.currentTime });
   });
@@ -44,7 +43,7 @@ export const useAudioStore = create<AudioState>((set) => {
   });
 
   return {
-    chunkId: null,
+    audioUrl: null,
     chapterTitle: null,
     narrationText: null,
     alignment: null,
@@ -53,13 +52,15 @@ export const useAudioStore = create<AudioState>((set) => {
     duration: 0,
     speed: 1,
 
-    play: (chunkId, chapterTitle, text, durationSec) => {
+    play: (audioUrl, chapterTitle, text, durationSec) => {
+      const prev = get().audioUrl;
+      if (prev) URL.revokeObjectURL(prev);
       const alignment = buildSyntheticAlignment(text, durationSec);
-      audio.src = streamUrl(chunkId);
+      audio.src = audioUrl;
       audio.playbackRate = useAudioStore.getState().speed;
       audio.play();
       set({
-        chunkId,
+        audioUrl,
         chapterTitle,
         narrationText: text,
         alignment,
@@ -87,10 +88,12 @@ export const useAudioStore = create<AudioState>((set) => {
     },
 
     stop: () => {
+      const prev = get().audioUrl;
+      if (prev) URL.revokeObjectURL(prev);
       audio.pause();
       audio.src = "";
       set({
-        chunkId: null,
+        audioUrl: null,
         chapterTitle: null,
         narrationText: null,
         alignment: null,

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
+from urllib.parse import quote
 
 import httpx
-from flask import Blueprint, jsonify, redirect, request
+from flask import Blueprint, Response, jsonify, request
 
 from story_backend.config import SMALLEST_BASE_URL, smallest_headers
-from story_backend.db import get_client
 
 log = logging.getLogger(__name__)
 
@@ -142,66 +142,12 @@ def narrate():
     audio_bytes = resp.content
     duration = _duration_sec(audio_bytes, sample_rate)
 
-    convex = get_client()
-    upload_url = convex.mutation("audioChunks:generateUploadUrl")
-    try:
-        upload_resp = httpx.post(
-            upload_url,
-            content=audio_bytes,
-            headers={"Content-Type": "audio/wav"},
-            timeout=60.0,
-        )
-        upload_resp.raise_for_status()
-    except httpx.RequestError as exc:
-        log.error("Convex upload failed: %s", exc)
-        return jsonify(error="Storage upload failed"), 502
-    storage_id = upload_resp.json()["storageId"]
-
-    book_id = data.get("book_id")
-    create_args: dict = {
-        "text": tts_text,
-        "voiceId": voice_id,
-        "sampleRate": sample_rate,
-        "durationSec": duration,
-        "storageId": storage_id,
-    }
-    if book_id:
-        create_args["bookId"] = book_id
-    chunk_id = convex.mutation("audioChunks:create", create_args)
-
-    return jsonify(
-        chunk_id=chunk_id,
-        voice_id=voice_id,
-        duration_sec=duration,
-        narrated_text=tts_text,
-        status="completed",
+    return Response(
+        audio_bytes,
+        mimetype="audio/wav",
+        headers={
+            "X-Duration-Sec": str(duration),
+            "X-Narrated-Text": quote(tts_text.replace("\n", " ")[:500]),
+            "X-Voice-Id": voice_id,
+        },
     )
-
-
-@narration_bp.get("/stream/<chunk_id>")
-def stream(chunk_id):
-    """Stream audio bytes for a narrated chunk.
-    ---
-    tags:
-      - Narration
-    parameters:
-      - in: path
-        name: chunk_id
-        type: string
-        required: true
-        description: The chunk_id returned by /narrate.
-    produces:
-      - audio/wav
-    responses:
-      200:
-        description: Streamed WAV audio bytes.
-        schema:
-          type: file
-      404:
-        description: chunk_id not found.
-    """
-    result = get_client().query("audioChunks:getUrl", {"id": chunk_id})
-    if not result or not result.get("url"):
-        return jsonify(error="chunk_id not found"), 404
-
-    return redirect(result["url"])

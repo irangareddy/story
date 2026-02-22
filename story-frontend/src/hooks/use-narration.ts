@@ -3,11 +3,10 @@ import { narrate } from "@/lib/api";
 
 export function useNarrate() {
   return useMutation({
-    mutationFn: ({ text, voiceId, speed, bookId }: {
+    mutationFn: ({ text, voiceId, speed }: {
       text: string;
       voiceId?: string;
       speed?: number;
-      bookId?: string;
-    }) => narrate(text, voiceId, speed, bookId),
+    }) => narrate(text, voiceId, speed),
   });
 }

@@ -97,7 +97,7 @@ def clone_voice():
         return jsonify(error="No audio file provided"), 400
 
     url = f"{SMALLEST_BASE_URL}/api/v1/lightning-large/add_voice"
-    files = {"file": (file.filename, file.stream, file.content_type or "audio/wav")}
+    files = {"file": (file.filename, file.stream, "audio/wav")}
     data = {"displayName": name}
 
     resp = httpx.post(url, headers=_auth_headers(), files=files, data=data, timeout=_TIMEOUT)

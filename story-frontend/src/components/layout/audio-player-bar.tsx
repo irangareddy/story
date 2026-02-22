@@ -19,7 +19,7 @@ const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 export function AudioPlayerBar() {
   const {
-    chunkId,
+    audioUrl,
     chapterTitle,
     isPlaying,
     currentTime,
@@ -32,7 +32,7 @@ export function AudioPlayerBar() {
     stop,
   } = useAudioStore();
 
-  if (!chunkId) return null;
+  if (!audioUrl) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background p-3">
