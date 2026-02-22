@@ -35,7 +35,7 @@ export function NarrateButton({ text, chapterTitle, bookId }: NarrateButtonProps
       },
       {
         onSuccess: (data) => {
-          play(data.chunk_id, chapterTitle);
+          play(data.chunk_id, chapterTitle, data.narrated_text, data.duration_sec);
         },
         onError: (err) => {
           toast.error(err.message || "Narration failed");

@@ -12,10 +12,10 @@ export function Header() {
   return (
     <header className="border-b bg-background">
       <div className="container mx-auto flex h-14 items-center px-4">
-        <Link to="/" className="mr-8 text-lg font-bold">
+        <Link to="/" className="mr-8 text-lg font-bold" style={{ fontFamily: "'Space Mono', monospace" }}>
           Story
         </Link>
-        <nav className="flex gap-4">
+        <nav className="flex gap-4" style={{ fontFamily: "'Space Mono', monospace" }}>
           {links.map((link) => (
             <Link
               key={link.to}

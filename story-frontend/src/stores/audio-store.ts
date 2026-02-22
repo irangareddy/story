@@ -1,15 +1,20 @@
 import { create } from "zustand";
+import type { CharacterAlignmentResponseModel } from "@elevenlabs/elevenlabs-js/api/types/CharacterAlignmentResponseModel";
+import { buildSyntheticAlignment } from "@/lib/alignment";
+import { streamUrl } from "@/lib/api";
 
 const audio = new Audio();
 
 interface AudioState {
   chunkId: string | null;
   chapterTitle: string | null;
+  narrationText: string | null;
+  alignment: CharacterAlignmentResponseModel | null;
   isPlaying: boolean;
   currentTime: number;
   duration: number;
   speed: number;
-  play: (chunkId: string, chapterTitle?: string) => void;
+  play: (chunkId: string, chapterTitle: string, text: string, durationSec: number) => void;
   pause: () => void;
   resume: () => void;
   setSpeed: (speed: number) => void;
@@ -41,16 +46,26 @@ export const useAudioStore = create<AudioState>((set) => {
   return {
     chunkId: null,
     chapterTitle: null,
+    narrationText: null,
+    alignment: null,
     isPlaying: false,
     currentTime: 0,
     duration: 0,
     speed: 1,
 
-    play: (chunkId, chapterTitle) => {
-      audio.src = `/stream/${chunkId}`;
+    play: (chunkId, chapterTitle, text, durationSec) => {
+      const alignment = buildSyntheticAlignment(text, durationSec);
+      audio.src = streamUrl(chunkId);
       audio.playbackRate = useAudioStore.getState().speed;
       audio.play();
-      set({ chunkId, chapterTitle: chapterTitle ?? null, currentTime: 0, duration: 0 });
+      set({
+        chunkId,
+        chapterTitle,
+        narrationText: text,
+        alignment,
+        currentTime: 0,
+        duration: 0,
+      });
     },
 
     pause: () => {
@@ -74,7 +89,15 @@ export const useAudioStore = create<AudioState>((set) => {
     stop: () => {
       audio.pause();
       audio.src = "";
-      set({ chunkId: null, chapterTitle: null, isPlaying: false, currentTime: 0, duration: 0 });
+      set({
+        chunkId: null,
+        chapterTitle: null,
+        narrationText: null,
+        alignment: null,
+        isPlaying: false,
+        currentTime: 0,
+        duration: 0,
+      });
     },
   };
 });

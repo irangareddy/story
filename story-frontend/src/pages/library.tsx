@@ -2,6 +2,7 @@ import { useBooks } from "@/hooks/use-books";
 import { BookCard } from "@/components/library/book-card";
 import { UploadDialog } from "@/components/library/upload-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 export default function Library() {
   const { data: books, isLoading, error } = useBooks();
@@ -9,14 +10,23 @@ export default function Library() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Library</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Library</h1>
+          {books && books.length > 0 && (
+            <Badge variant="secondary">{books.length}</Badge>
+          )}
+        </div>
         <UploadDialog />
       </div>
 
       {isLoading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="aspect-[2/3] rounded-lg" />
+              <Skeleton className="h-4 w-3/4 mx-auto" />
+              <Skeleton className="h-3 w-1/2 mx-auto" />
+            </div>
           ))}
         </div>
       )}
@@ -34,7 +44,7 @@ export default function Library() {
       )}
 
       {books && books.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
           {books.map((book) => (
             <BookCard key={book._id} book={book} />
           ))}
