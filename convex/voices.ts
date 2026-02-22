@@ -20,6 +20,16 @@ export const list = query({
   },
 });
 
+export const getByVoiceId = query({
+  args: { voiceId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("voices")
+      .withIndex("by_voiceId", (q) => q.eq("voiceId", args.voiceId))
+      .first();
+  },
+});
+
 export const sync = mutation({
   args: {
     voices: v.array(

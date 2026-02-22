@@ -27,6 +27,13 @@ export const get = query({
   },
 });
 
+export const remove = mutation({
+  args: { id: v.id("books") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.id);
+  },
+});
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
