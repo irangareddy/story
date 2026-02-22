@@ -33,6 +33,7 @@ export interface NarrateResponse {
   chunk_id: string;
   voice_id: string;
   duration_sec: number;
+  narrated_text: string;
   status: string;
 }
 
