@@ -1,7 +1,8 @@
+import io
 import os
 
 from flasgger import Swagger
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, Response, jsonify, request, send_from_directory
 
 from story_backend.config import SMALLEST_API_KEY  # noqa: F401 — triggers dotenv load
 from story_backend.db import get_client
@@ -119,6 +120,76 @@ def upload():
     })
 
     return jsonify({**result, "book_id": book_id})
+
+
+@app.get("/covers/<path:filename>")
+def cover_image(filename: str):
+    """Extract and serve a book's cover image.
+    ---
+    tags:
+      - Files
+    parameters:
+      - in: path
+        name: filename
+        type: string
+        required: true
+    responses:
+      200:
+        description: Cover image (JPEG/PNG).
+      404:
+        description: No cover found.
+    """
+    safe_name = os.path.basename(filename)
+    filepath = os.path.join(DATA_DIR, safe_name)
+    if not os.path.isfile(filepath):
+        return jsonify(error="File not found"), 404
+
+    ext = safe_name.rsplit(".", 1)[-1].lower()
+
+    if ext == "epub":
+        try:
+            import ebooklib
+            from ebooklib import epub
+
+            book = epub.read_epub(filepath, options={"ignore_ncx": True})
+            # Try cover metadata
+            cover_id = None
+            for meta in book.get_metadata("OPF", "cover"):
+                if meta and meta[1].get("content"):
+                    cover_id = meta[1]["content"]
+                    break
+            # Search for cover image item
+            image_types = {ebooklib.ITEM_IMAGE, ebooklib.ITEM_COVER}
+            first_image = None
+            for item in book.get_items():
+                if item.get_type() not in image_types:
+                    continue
+                if not first_image:
+                    first_image = item
+                name = (item.get_name() or "").lower()
+                item_id = item.get_id() or ""
+                if (cover_id and item_id == cover_id) or "cover" in name or "cover" in item_id.lower():
+                    ct = "image/png" if name.endswith(".png") else "image/jpeg"
+                    return Response(item.get_content(), content_type=ct)
+            if first_image:
+                name = (first_image.get_name() or "").lower()
+                ct = "image/png" if name.endswith(".png") else "image/jpeg"
+                return Response(first_image.get_content(), content_type=ct)
+        except Exception:
+            pass
+
+    if ext == "pdf":
+        try:
+            import fitz
+
+            doc = fitz.open(filepath)
+            page = doc[0]
+            pix = page.get_pixmap(dpi=150)
+            return Response(pix.tobytes("jpeg"), content_type="image/jpeg")
+        except Exception:
+            pass
+
+    return jsonify(error="No cover found"), 404
 
 
 @app.get("/books")
