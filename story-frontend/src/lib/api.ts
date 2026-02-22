@@ -7,8 +7,10 @@ import type {
   TranscriptionResponse,
 } from "./types";
 
+const API_PREFIX = "/api";
+
 async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetch(`${API_PREFIX}${url}`, init);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error((body as { error?: string }).error || res.statusText);
@@ -72,11 +74,15 @@ export async function narrate(
 }
 
 export function streamUrl(chunkId: string): string {
-  return `/stream/${chunkId}`;
+  return `${API_PREFIX}/stream/${chunkId}`;
 }
 
 export function bookFileUrl(filename: string): string {
-  return `/files/${encodeURIComponent(filename)}`;
+  return `${API_PREFIX}/files/${encodeURIComponent(filename)}`;
+}
+
+export function coverUrl(filename: string): string {
+  return `${API_PREFIX}/covers/${encodeURIComponent(filename)}`;
 }
 
 export async function transcribe(

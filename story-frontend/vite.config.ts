@@ -16,15 +16,10 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      "/upload": "http://127.0.0.1:5000",
-      "/books": "http://127.0.0.1:5000",
-      "/clone": "http://127.0.0.1:5000",
-      "/voices": "http://127.0.0.1:5000",
-      "/narrate": "http://127.0.0.1:5000",
-      "/stream": "http://127.0.0.1:5000",
-      "/transcribe": "http://127.0.0.1:5000",
-      "/transcriptions": "http://127.0.0.1:5000",
-      "/files": "http://127.0.0.1:5000",
+      "/api": {
+        target: "http://127.0.0.1:5000",
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
     },
   },
 })
